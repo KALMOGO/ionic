@@ -80,35 +80,3 @@ class UserListAPIView(generics.ListAPIView):
         return queryset
 
 
-# Authentification with google
-
-from django.conf import settings
-from django.contrib.auth import authenticate, login
-from django.http import JsonResponse
-from google.oauth2 import id_token
-from google.auth.transport import requests
-
-def google_auth(request):
-    if request.method == 'POST':
-        # Get the access token from the POST request
-        access_token = request.POST.get('access_token', None)
-        if access_token:
-            try:
-                # Verify the token with Google
-                idinfo = id_token.verify_oauth2_token(
-                    access_token, requests.Request(), settings.GOOGLE_CLIENT_ID
-                )
-
-                email = idinfo['email']
-                user = authenticate(request, username=email, password=None)
-                if user is None:
-                    user = User.objects.create_user(email=email, password=None)
-                login(request, user)
-
-                return JsonResponse({'success': True})
-
-            except ValueError:
-                # Invalid token
-                return JsonResponse({'success': False, 'message': 'Invalid token.'})
-    else:
-        return JsonResponse({'success': False, 'message': 'GET request not allowed.'})
